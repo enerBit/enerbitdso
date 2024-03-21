@@ -60,8 +60,16 @@ def fetch(
     frt_file: pathlib.Path = typer.Option(
         None, help="Path file with one frt code per line"
     ),
+    timeout: int = typer.Option(
+        5,
+        min=0,
+        max=20,
+    ),
     frts: list[str] = typer.Argument(None, help="List of frt codes separated by ' '"),
 ):
+    if timeout is not None:
+        enerbit.set_http_timeout(timeout)
+
     try:
         ebclient = enerbit.get_client(api_base_url, api_username, api_password)
     except Exception:

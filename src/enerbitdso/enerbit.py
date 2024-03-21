@@ -37,6 +37,9 @@ class ScheduleMeasurementRecord(pydantic.BaseModel):
     reactive_energy_imported: float
     reactive_energy_exported: float
 
+def set_http_timeout(timeout):
+    global TIMEOUT
+    TIMEOUT = httpx.Timeout(timeout, read=60)
 
 def get_auth_token(base_url, username, password):
     path = "/auth/token/"
