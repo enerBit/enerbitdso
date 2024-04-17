@@ -93,7 +93,7 @@ def get_schedule_usage_records(
     records = response.json()
     print(f"Estos son los records: {records}")
     records = sorted(records, key=lambda r: r["time_start"])
-    usage_records = records
+    usage_records = [ScheduleUsageRecord.model_validate(r) for r in records]
     usage_records = scale_usage_records(usage_records, scale=WATT_HOUR_TO_KILOWATT_HOUR)
     return usage_records
 
