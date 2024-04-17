@@ -109,6 +109,7 @@ def get_schedule_measurement_records(
     response.raise_for_status()
     records = response.json()
     records = sorted(records, key=lambda r: r["time_local_utc"])
+    print(f"Estos son los records: {records}")
     measurement_records = records
     measurement_records = scale_measurement_records(
         measurement_records, scale=WATT_HOUR_TO_KILOWATT_HOUR
