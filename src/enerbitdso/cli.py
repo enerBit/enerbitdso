@@ -107,7 +107,7 @@ def fetch(
             )
         except Exception:
             err_console.print(f"Failed to fetch usage records for frt code '{f}'")
-            # err_console.print_exception()
+            err_console.print_exception()
             continue
 
         match out_format:
