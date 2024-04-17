@@ -87,11 +87,9 @@ def get_schedule_usage_records(
         "period-string": "hour",
         "period-number": 1,
     }
-    print(f"Params: {params}")
     response = client.get(path, params=params)
     response.raise_for_status()
     records = response.json()
-    print(f"Estos son los records: {records}")
     records = sorted(records, key=lambda r: r["time_start"])
     usage_records = [ScheduleUsageRecord.model_validate(r) for r in records]
     usage_records = scale_usage_records(usage_records, scale=WATT_HOUR_TO_KILOWATT_HOUR)
@@ -111,7 +109,6 @@ def get_schedule_measurement_records(
     response.raise_for_status()
     records = response.json()
     records = sorted(records, key=lambda r: r["time_local_utc"])
-    print(f"Estos son los records: {records}")
     measurement_records = records
     measurement_records = scale_measurement_records(
         measurement_records, scale=WATT_HOUR_TO_KILOWATT_HOUR
