@@ -148,7 +148,7 @@ setup(
     install_requires=[
         "httpx",
         "typer",
-        "pydantic",
+        "pydantic>2",
         "tzdata",
         "urlpath",
         "rich",

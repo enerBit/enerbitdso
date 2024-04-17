@@ -130,14 +130,15 @@ También tiene opción `--help` que muestra la ayuda particular de este sub-coma
 │   frts      [FRTS]...  List of frt codes separated by ' ' [default: None]                                      │
 ╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 ╭─ Options ──────────────────────────────────────────────────────────────────────────────────────────────────────╮
-│ *  --api-base-url        TEXT               [env var: ENERBIT_API_BASE_URL] [default: None] [required]         │
-│ *  --api-username        TEXT               [env var: ENERBIT_API_USERNAME] [default: None] [required]         │
-│ *  --api-password        TEXT               [env var: ENERBIT_API_PASSWORD] [default: None] [required]         │
-│    --since               [%Y-%m-%d|%Y%m%d]  [default: (yesterday)]                                             │
-│    --until               [%Y-%m-%d|%Y%m%d]  [default: (today)]                                                 │
-│    --timezone            TEXT               [default: America/Bogota]                                          │
-│    --out-format          [csv|jsonl]        Output file format [default: jsonl]                                │
-│    --frt-file            PATH               Path file with one frt code per line [default: None]               │
-│    --help                                   Show this message and exit.                                        │
+│ *  --api-base-url        TEXT                      [env var: ENERBIT_API_BASE_URL] [default: None] [required]  │
+│ *  --api-username        TEXT                      [env var: ENERBIT_API_USERNAME] [default: None] [required]  │
+│ *  --api-password        TEXT                      [env var: ENERBIT_API_PASSWORD] [default: None] [required]  │
+│    --since               [%Y-%m-%d|%Y%m%d]         [default: (yesterday)]                                      │
+│    --until               [%Y-%m-%d|%Y%m%d]         [default: (today)]                                          │
+│    --timezone            TEXT                      [default: America/Bogota]                                   │
+│    --out-format          [csv|jsonl]               Output file format [default: jsonl]                         │
+│    --frt-file            PATH                      Path file with one frt code per line [default: None]        │ 
+│    --timeout             INTEGER RANGE [0<=x<=20]  [default: 5]                                                │
+│    --help                                          Show this message and exit.                                 │
 ╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 ```

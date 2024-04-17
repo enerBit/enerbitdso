@@ -37,6 +37,9 @@ class ScheduleMeasurementRecord(pydantic.BaseModel):
     reactive_energy_imported: float
     reactive_energy_exported: float
 
+def set_http_timeout(timeout):
+    global TIMEOUT
+    TIMEOUT = httpx.Timeout(timeout, read=60)
 
 def get_auth_token(base_url, username, password):
     path = "/auth/token/"
@@ -106,7 +109,7 @@ def get_schedule_measurement_records(
     response.raise_for_status()
     records = response.json()
     records = sorted(records, key=lambda r: r["time_local_utc"])
-    measurement_records = [ScheduleMeasurementRecord.model_validate(r) for r in records]
+    measurement_records = records
     measurement_records = scale_measurement_records(
         measurement_records, scale=WATT_HOUR_TO_KILOWATT_HOUR
     )
