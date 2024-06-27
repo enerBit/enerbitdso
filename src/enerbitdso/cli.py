@@ -80,7 +80,7 @@ def fetch(
     else:
         until = until.astimezone(TZ_INFO)
 
-    if not operator.xor(frt_file is not None, len(frts) > 0):
+    if not operator.xor(frt_file is not None, frts is not None):
         err_console.print("Can't use '--FRT_FILE' and 'FRTS' on the same call")
         raise typer.Exit(code=1)
 
