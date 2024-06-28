@@ -146,13 +146,13 @@ setup(
     # For an analysis of "install_requires" vs pip"s requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
     install_requires=[
-        "httpx",
-        "typer",
-        "pydantic",
-        "tzdata",
-        "urlpath",
-        "rich",
-        "orjson",
+        "httpx==0.27.0",
+        "orjson==3.10.3",
+        "pydantic==2.5.3",
+        "rich==13.7.0",
+        "urlpath==1.2.0",
+        "typer==0.9.0",
+        "tzdata==2023.4",
     ],  # Optional
     # List additional groups of dependencies here (e.g. development
     # dependencies). Users will be able to install these using the "extras"
