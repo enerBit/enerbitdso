@@ -113,17 +113,42 @@ def get_schedule_measurement_records(
     return measurement_records
 
 
-def fetch_schedule_usage_records_large_interval(
-    client: httpx.Client, frt_code: str, since: dt.datetime, until: dt.datetime
-) -> list[ScheduleUsageRecord]:
-    number_of_requests = math.ceil((until - since) / MAX_REQUEST_RANGE)
-    logger.debug(f"Fetching usages in {number_of_requests} requests")
-    usage_records = []
-    for i in range(0, number_of_requests):
-        fi = since + i * MAX_REQUEST_RANGE
-        ff = min(fi + MAX_REQUEST_RANGE, until)
-        this_usage_records = get_schedule_usage_records(
-            client, frt_code, since=fi, until=ff
-        )
-        usage_records.extend(this_usage_records)
-    return usage_records
+class DSOConnector:
+    def __init__(
+        self, api_username: str, api_password: pydantic.SecretStr, api_base_url: str
+    ) -> None:
+        self.api_base_url = api_base_url
+        self.api_username = api_username
+        self.api_password = api_password
+
+    def fetch_schedule_usage_records_large_interval(
+        self, frt_code: str, since: dt.datetime, until: dt.datetime
+    ) -> list[ScheduleUsageRecord]:
+        ebclient = get_client(self.api_base_url, self.api_username, self.api_password)
+        number_of_requests = math.ceil((until - since) / MAX_REQUEST_RANGE)
+        logger.debug(f"Fetching usages in {number_of_requests} requests")
+        usage_records = []
+        for i in range(0, number_of_requests):
+            fi = since + i * MAX_REQUEST_RANGE
+            ff = min(fi + MAX_REQUEST_RANGE, until)
+            this_usage_records = get_schedule_usage_records(
+                ebclient, frt_code, since=fi, until=ff
+            )
+            usage_records.extend(this_usage_records)
+        return usage_records
+
+    def fetch_schedule_measurements_records_large_interval(
+        self, frt_code: str, since: dt.datetime, until: dt.datetime
+    ) -> list[ScheduleMeasurementRecord]:
+        ebclient = get_client(self.api_base_url, self.api_username, self.api_password)
+        number_of_requests = math.ceil((until - since) / MAX_REQUEST_RANGE)
+        logger.debug(f"Fetching schedules in {number_of_requests} requests")
+        schedule_records = []
+        for i in range(0, number_of_requests):
+            fi = since + i * MAX_REQUEST_RANGE
+            ff = min(fi + MAX_REQUEST_RANGE, until)
+            this_schedule_records = get_schedule_measurement_records(
+                ebclient, frt_code, since=fi, until=ff
+            )
+            schedule_records.extend(this_schedule_records)
+        return schedule_records

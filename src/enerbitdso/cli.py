@@ -92,10 +92,14 @@ def fetch(
         f"Fetching usages for {len(frts)} frts since={since} until={until}"
     )
 
+    ebconnector = enerbit.DSOConnector(
+        api_base_url=api_base_url, api_username=api_username, api_password=api_password
+    )
+    header = True
     for i, f in enumerate(frts):
         try:
-            usage_records = enerbit.fetch_schedule_usage_records_large_interval(
-                ebclient, f, since=since, until=until
+            usage_records = ebconnector.fetch_schedule_usage_records_large_interval(
+                f, since=since, until=until
             )
         except Exception:
             err_console.print(f"Failed to fetch usage records for frt code '{f}'")
@@ -104,11 +108,8 @@ def fetch(
 
         match out_format:
             case OutputFormat.csv:
-                if i == 0:
-                    header = True
-                else:
-                    header = False
                 content = formats.as_csv(usage_records, header=header)
+                header = False
             case OutputFormat.jsonl:
                 content = formats.as_jsonl(usage_records)
 
