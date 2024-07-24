@@ -141,3 +141,41 @@ También tiene opción `--help` que muestra la ayuda particular de este sub-coma
 │    --help                                   Show this message and exit.                                        │
 ╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 ```
+
+# Librería DSO
+
+Para poder hacer uso de la librería DSO se debe hacer lo siguiente
+
+## Inicializar el constructor
+
+Para ello se debe importar el constructor de la siguiente forma:
+
+```txt
+from enerbitdso.enerbit import DSOConnector
+```
+
+La inicialización se debe hacer asi:
+
+```txt
+ebconnector = enerbit.DSOConnector(
+    api_base_url="https://dso.enerbit.me/",
+    api_username="usuario_del_DSO",
+    api_password="contraseña_del_DSO",
+)
+```
+
+Al tener el objeto ya se pueden realizar consultas de la siguiente forma:
+
+```txt
+usage_records = ebconnector.fetch_schedule_usage_records_large_interval(
+    frt_code=frt_code, since=since, until=until
+)
+```
+
+Tambien se puede hacer una consulta de perfiles de la siguiente forma:
+
+```txt
+schedule_records = ebconnector.fetch_schedule_measurements_records_large_interval(
+    frt_code=frt_code, since=since, until=until
+)
+```
