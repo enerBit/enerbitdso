@@ -1,16 +1,19 @@
-import pandas as pd
 import datetime as dt
-from typing import List, Any, Dict
 import random
 import string
-from enerbitdso.enerbit import ScheduleUsageRecord, ScheduleMeasurementRecord
+from typing import List
 
+import pandas as pd
+
+from enerbitdso.enerbit import ScheduleMeasurementRecord, ScheduleUsageRecord
 
 mocked_usages: List[ScheduleUsageRecord] = []
 mocked_schedules: List[ScheduleMeasurementRecord] = []
 
 
-def create_mocked_schedules(frt_code: str, since: dt.datetime, until: dt.datetime) -> None:
+def create_mocked_schedules(
+    frt_code: str, since: dt.datetime, until: dt.datetime
+) -> None:
     mocked_schedules.clear()
     dt_range = pd.core.indexes.datetimes.DatetimeIndex = (
         pd.core.indexes.datetimes.date_range(
@@ -48,8 +51,14 @@ def create_mocked_schedules(frt_code: str, since: dt.datetime, until: dt.datetim
         )
 
 
-def get_mocked_schedules(ebclient ,frt_code, since, until) -> list[ScheduleUsageRecord]:
-    filtered_mocked_usages = [schedules for schedules in mocked_schedules if schedules["time_local_utc"] >= since and schedules["time_local_utc"] <= until and schedules["frt_code"] == frt_code]
+def get_mocked_schedules(ebclient, frt_code, since, until) -> list[ScheduleUsageRecord]:
+    filtered_mocked_usages = [
+        schedules
+        for schedules in mocked_schedules
+        if schedules["time_local_utc"] >= since
+        and schedules["time_local_utc"] <= until
+        and schedules["frt_code"] == frt_code
+    ]
     return filtered_mocked_usages
 
 
@@ -60,7 +69,7 @@ def create_mocked_usages(frt_code: str, since: dt.datetime, until: dt.datetime) 
             since,
             until - dt.timedelta(hours=1),
             inclusive="both",
-            freq="1H",
+            freq="1h",
         )
     )
     intervals = pd.DataFrame({"start": dt_range})
@@ -82,6 +91,12 @@ def create_mocked_usages(frt_code: str, since: dt.datetime, until: dt.datetime) 
         )
 
 
-def get_mocked_usages(ebclient ,frt_code, since, until) -> list[ScheduleUsageRecord]:
-    filtered_mocked_usages = [usages for usages in mocked_usages if usages["time_start"] >= since and usages["time_end"] <= until and usages["frt_code"] == frt_code]
+def get_mocked_usages(ebclient, frt_code, since, until) -> list[ScheduleUsageRecord]:
+    filtered_mocked_usages = [
+        usages
+        for usages in mocked_usages
+        if usages["time_start"] >= since
+        and usages["time_end"] <= until
+        and usages["frt_code"] == frt_code
+    ]
     return filtered_mocked_usages
