@@ -53,10 +53,9 @@ pattern = "^(?P<version>.+)$"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/enerbitdso"]
+sources = ["src"]
+include = ["tests"]
 
-[tool.hatch.build.targets.sdist]
-packages = ["src/enerbitdso"]
-include = ["/tests"]
 
 [tool.pytest.ini_options]
 pythonpath = "src"
