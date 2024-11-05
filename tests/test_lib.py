@@ -1,23 +1,24 @@
+import datetime as dt
+import random
 import unittest
+from unittest.mock import patch
+
 from enerbitdso.enerbit import (
     DSOConnector,
 )
-from unittest.mock import patch
-import datetime as dt
-import random
-from enerbitdso.tests.mocked_responses import (
+
+from .mocked_responses import (
     create_mocked_usages,
-    get_mocked_usages,
     get_mocked_schedules,
-    mocked_usages,
+    get_mocked_usages,
     mocked_schedules,
+    mocked_usages,
 )
 
 WEEKS_TO_TEST = 5
 
 
 class TestMyLibrary(unittest.TestCase):
-
     @patch("enerbitdso.enerbit.get_auth_token")
     def test_get_all_usage_records(self, mock_get_auth_token):
         today = dt.datetime.now()
@@ -64,7 +65,7 @@ class TestMyLibrary(unittest.TestCase):
             )
         for usage in usages:
             self.assertIn(
-                usage, mocked_usages, f"The usage is not in mocked usages list"
+                usage, mocked_usages, "The usage is not in mocked usages list"
             )
 
     @patch("enerbitdso.enerbit.get_auth_token")
@@ -137,7 +138,7 @@ class TestMyLibrary(unittest.TestCase):
             )
         for schedule in schedules:
             self.assertIn(
-                schedule, mocked_schedules, f"The schedule is not in mocked usages list"
+                schedule, mocked_schedules, "The schedule is not in mocked usages list"
             )
 
     @patch("enerbitdso.enerbit.get_auth_token")
