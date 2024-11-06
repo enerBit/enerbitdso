@@ -1,13 +1,16 @@
 import datetime as dt
 import logging
 import math
+import ssl
 
 import httpx
 import pydantic
+import truststore
 import urlpath
 
 logger = logging.getLogger(__name__)
 
+SSL_CONTEXT = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
 
 TIMEOUT = httpx.Timeout(5, read=60)
 
@@ -41,9 +44,14 @@ class ScheduleMeasurementRecord(pydantic.BaseModel):
 def get_auth_token(base_url, username, password):
     path = "/auth/token/"
     data = {"username": username, "password": password}
-    with httpx.Client(base_url=base_url, timeout=TIMEOUT) as client:
+    with httpx.Client(base_url=base_url, timeout=TIMEOUT, verify=SSL_CONTEXT) as client:
         response = client.post(path, data=data)
-        response.raise_for_status()
+        try:
+            response.raise_for_status()
+        except httpx.HTTPStatusError as e:
+            logger.error(f"Failed to authenticate: {e}")
+            logger.error(f"Response: {response.text}")
+            raise
     token = response.json()["access_token"]
     return token
 
@@ -52,7 +60,7 @@ def get_client(base_url, username, password):
     url = str(urlpath.URL(base_url))
     token = get_auth_token(url, username, password)
     auth = {"Authorization": f"Bearer {token}"}
-    return httpx.Client(base_url=url, headers=auth, timeout=TIMEOUT)
+    return httpx.Client(base_url=url, headers=auth, timeout=TIMEOUT, verify=SSL_CONTEXT)
 
 
 def scale_measurement_records(records: list[ScheduleMeasurementRecord], scale: float):
@@ -85,6 +93,12 @@ def get_schedule_usage_records(
         "period-number": 1,
     }
     response = client.get(path, params=params)
+    try:
+        response.raise_for_status()
+    except httpx.HTTPStatusError as e:
+        logger.error(f"Failed to fetch usage records: {e}")
+        logger.error(f"Response: {response.text}")
+        raise
     response.raise_for_status()
     records = response.json()
     records = sorted(records, key=lambda r: r["time_start"])
@@ -103,6 +117,12 @@ def get_schedule_measurement_records(
         "frt-code": frt_code,
     }
     response = client.get(path, params=params)
+    try:
+        response.raise_for_status()
+    except httpx.HTTPStatusError as e:
+        logger.error(f"Failed to fetch measurement records: {e}")
+        logger.error(f"Response: {response.text}")
+        raise
     response.raise_for_status()
     records = response.json()
     records = sorted(records, key=lambda r: r["time_local_utc"])
@@ -113,7 +133,7 @@ def get_schedule_measurement_records(
     return measurement_records
 
 
-class DSOConnector:
+class DSOClient:
     def __init__(
         self, api_username: str, api_password: pydantic.SecretStr, api_base_url: str
     ) -> None:

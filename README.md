@@ -151,13 +151,13 @@ Para poder hacer uso de la librería DSO se debe hacer lo siguiente
 Para ello se debe importar el constructor de la siguiente forma:
 
 ```txt
-from enerbitdso.enerbit import DSOConnector
+from enerbitdso.enerbit import DSOClient
 ```
 
 La inicialización se debe hacer asi:
 
 ```txt
-ebconnector = enerbit.DSOConnector(
+ebconnector = enerbit.DSOClient(
     api_base_url="https://dso.enerbit.me/",
     api_username="usuario_del_DSO",
     api_password="contraseña_del_DSO",
