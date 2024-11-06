@@ -4,9 +4,9 @@ import logging
 import operator
 import pathlib
 import sys
-import zoneinfo
 
 import typer
+import zoneinfo
 from rich.console import Console
 
 from enerbitdso import enerbit, formats
@@ -54,14 +54,24 @@ def fetch(
         formats=DATE_FORMATS,
         show_default="today",
     ),
-    out_format: OutputFormat = typer.Option("jsonl", help="Output file format", case_sensitive=False),
-    frt_file: pathlib.Path = typer.Option(None, help="Path file with one frt code per line"),
+    out_format: OutputFormat = typer.Option(
+        "jsonl", help="Output file format", case_sensitive=False
+    ),
+    frt_file: pathlib.Path = typer.Option(
+        None, help="Path file with one frt code per line"
+    ),
     frts: list[str] = typer.Argument(None, help="List of frt codes separated by ' '"),
 ):
     try:
-        ebclient = enerbit.get_client(api_base_url, api_username, api_password)
+        ebconnector = enerbit.DSOClient(
+            api_base_url=api_base_url,
+            api_username=api_username,
+            api_password=api_password,
+        )
     except Exception:
-        err_console.print(f"Failed to authenticate to '{api_base_url}' as '{api_username}'")
+        err_console.print(
+            f"Failed to authenticate to '{api_base_url}' as '{api_username}'"
+        )
         raise typer.Exit(code=1)
 
     today = dt.datetime.now(TZ_INFO).replace(**DATE_PARTS_TO_START_DAY)
@@ -74,6 +84,9 @@ def fetch(
     else:
         until = until.astimezone(TZ_INFO)
 
+    if frts is None:
+        frts = []
+
     if not operator.xor(frt_file is not None, len(frts) != 0):
         err_console.print("Can't use '--FRT_FILE' and 'FRTS' on the same call")
         raise typer.Exit(code=1)
@@ -82,16 +95,19 @@ def fetch(
         with open(frt_file, "r") as frts_src:
             frts = frts_src.read().splitlines()
 
-    err_console.print(f"Fetching usages for {len(frts)} frts since={since} until={until}")
+    err_console.print(
+        f"Fetching usages for {len(frts)} frts since={since} until={until}"
+    )
 
-    ebconnector = enerbit.DSOConnector(api_base_url=api_base_url, api_username=api_username, api_password=api_password)
     header = True
     for i, f in enumerate(frts):
         try:
-            usage_records = ebconnector.fetch_schedule_usage_records_large_interval(f, since=since, until=until)
+            usage_records = ebconnector.fetch_schedule_usage_records_large_interval(
+                f, since=since, until=until
+            )
         except Exception:
             err_console.print(f"Failed to fetch usage records for frt code '{f}'")
-            # err_console.print_exception()
+            err_console.print_exception()
             continue
 
         match out_format:
