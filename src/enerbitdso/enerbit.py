@@ -2,11 +2,12 @@ import datetime as dt
 import logging
 import math
 import ssl
+import urllib
+import urllib.parse
 
 import httpx
 import pydantic
 import truststore
-import urlpath
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +58,8 @@ def get_auth_token(base_url, username, password):
 
 
 def get_client(base_url, username, password):
-    url = str(urlpath.URL(base_url))
+    url_parse: urllib.parse.ParseResult = urllib.parse.urlparse(base_url)
+    url = url_parse.geturl()
     token = get_auth_token(url, username, password)
     auth = {"Authorization": f"Bearer {token}"}
     return httpx.Client(base_url=url, headers=auth, timeout=TIMEOUT, verify=SSL_CONTEXT)
