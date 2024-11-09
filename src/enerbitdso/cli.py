@@ -4,7 +4,9 @@ import logging
 import operator
 import pathlib
 import sys
+from typing import Annotated, TypedDict
 
+import pydantic
 import typer
 import zoneinfo
 from rich.console import Console
@@ -17,7 +19,22 @@ out_console = Console()
 logger = logging.getLogger(__name__)
 
 DATE_FORMATS = ["%Y-%m-%d", "%Y%m%d"]
-DATE_PARTS_TO_START_DAY = {"hour": 0, "minute": 0, "second": 0, "microsecond": 0}
+
+
+class DateParts(TypedDict, total=False):
+    hour: int
+    minute: int
+    second: int
+    microsecond: int
+
+
+DATE_PARTS_TO_START_DAY: DateParts = {
+    "hour": 0,
+    "minute": 0,
+    "second": 0,
+    "microsecond": 0,
+}
+
 TZ_INFO = zoneinfo.ZoneInfo("America/Bogota")
 
 
@@ -41,9 +58,12 @@ def today():
 
 @usages.command()
 def fetch(
-    api_base_url: str = typer.Option(..., envvar="ENERBIT_API_BASE_URL"),
-    api_username: str = typer.Option(..., envvar="ENERBIT_API_USERNAME"),
-    api_password: str = typer.Option(..., envvar="ENERBIT_API_PASSWORD"),
+    api_base_url: Annotated[str, typer.Option(..., envvar="ENERBIT_API_BASE_URL")],
+    api_username: Annotated[str, typer.Option(..., envvar="ENERBIT_API_USERNAME")],
+    api_password: Annotated[
+        pydantic.SecretStr,
+        typer.Option(parser=pydantic.SecretStr, envvar="ENERBIT_API_PASSWORD"),
+    ],
     since: dt.datetime = typer.Option(
         yesterday,
         formats=DATE_FORMATS,

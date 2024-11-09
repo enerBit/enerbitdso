@@ -2,11 +2,12 @@ import datetime as dt
 import logging
 import math
 import ssl
+import urllib
+import urllib.parse
 
 import httpx
 import pydantic
 import truststore
-import urlpath
 
 logger = logging.getLogger(__name__)
 
@@ -56,8 +57,11 @@ def get_auth_token(base_url, username, password):
     return token
 
 
-def get_client(base_url, username, password):
-    url = str(urlpath.URL(base_url))
+def get_client(
+    base_url: str, username: str, password: pydantic.SecretStr
+) -> httpx.Client:
+    url_parse: urllib.parse.ParseResult = urllib.parse.urlparse(base_url)
+    url = url_parse.geturl()
     token = get_auth_token(url, username, password)
     auth = {"Authorization": f"Bearer {token}"}
     return httpx.Client(base_url=url, headers=auth, timeout=TIMEOUT, verify=SSL_CONTEXT)
@@ -86,13 +90,16 @@ def get_schedule_usage_records(
 ) -> list[ScheduleUsageRecord]:
     path = "/measurements/schedules/usages"
     params = {
-        "since": since,
-        "until": until,
+        "since": since.isoformat(),
+        "until": until.isoformat(),
         "frt-code": frt_code,
         "period-string": "hour",
-        "period-number": 1,
+        "period-number": "1",
     }
-    response = client.get(path, params=params)
+    response = client.get(
+        path,
+        params=params,
+    )
     try:
         response.raise_for_status()
     except httpx.HTTPStatusError as e:
@@ -112,8 +119,8 @@ def get_schedule_measurement_records(
 ) -> list[ScheduleMeasurementRecord]:
     path = "/measurements/schedules/"
     params = {
-        "since": since,
-        "until": until,
+        "since": since.isoformat(),
+        "until": until.isoformat(),
         "frt-code": frt_code,
     }
     response = client.get(path, params=params)
