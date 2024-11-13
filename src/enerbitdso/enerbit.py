@@ -42,9 +42,9 @@ class ScheduleMeasurementRecord(pydantic.BaseModel):
     reactive_energy_exported: float
 
 
-def get_auth_token(base_url, username, password):
+def get_auth_token(base_url: str, username: str, password: pydantic.SecretStr) -> str:
     path = "/auth/token/"
-    data = {"username": username, "password": password}
+    data = {"username": username, "password": password.get_secret_value()}
     with httpx.Client(base_url=base_url, timeout=TIMEOUT, verify=SSL_CONTEXT) as client:
         response = client.post(path, data=data)
         try:
