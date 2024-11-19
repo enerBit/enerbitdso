@@ -60,7 +60,9 @@ def today():
 def fetch(
     api_base_url: Annotated[str, typer.Option(..., envvar="ENERBIT_API_BASE_URL")],
     api_username: Annotated[str, typer.Option(..., envvar="ENERBIT_API_USERNAME")],
-    api_password: Annotated[str, typer.Option(parser=pydantic.SecretStr, envvar="ENERBIT_API_PASSWORD"),
+    api_password: Annotated[
+        pydantic.SecretStr,
+        typer.Option(parser=pydantic.SecretStr, envvar="ENERBIT_API_PASSWORD"),
     ],
     since: dt.datetime = typer.Option(
         yesterday,
@@ -84,7 +86,7 @@ def fetch(
         ebconnector = enerbit.DSOClient(
             api_base_url=api_base_url,
             api_username=api_username,
-            api_password=api_password,
+            api_password=api_password.get_secret_value(),
         )
     except Exception:
         err_console.print(
