@@ -60,9 +60,7 @@ def today():
 def fetch(
     api_base_url: Annotated[str, typer.Option(..., envvar="ENERBIT_API_BASE_URL")],
     api_username: Annotated[str, typer.Option(..., envvar="ENERBIT_API_USERNAME")],
-    api_password: Annotated[
-        pydantic.SecretStr,
-        typer.Option(parser=pydantic.SecretStr, envvar="ENERBIT_API_PASSWORD"),
+    api_password: Annotated[str, typer.Option(parser=pydantic.SecretStr, envvar="ENERBIT_API_PASSWORD"),
     ],
     since: dt.datetime = typer.Option(
         yesterday,
