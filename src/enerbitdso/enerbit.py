@@ -142,11 +142,11 @@ def get_schedule_measurement_records(
 
 class DSOClient:
     def __init__(
-        self, api_username: str, api_password: pydantic.SecretStr, api_base_url: str
+        self, api_username: str, api_password: str, api_base_url: str
     ) -> None:
         self.api_base_url = api_base_url
         self.api_username = api_username
-        self.api_password = api_password
+        self.api_password = pydantic.SecretStr(api_password)
 
     def fetch_schedule_usage_records_large_interval(
         self, frt_code: str, since: dt.datetime, until: dt.datetime
