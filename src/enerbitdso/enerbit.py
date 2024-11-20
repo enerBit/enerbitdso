@@ -5,7 +5,7 @@ import ssl
 import urllib
 import urllib.parse
 from typing import Optional
- 
+
 import httpx
 import pydantic
 import truststore
@@ -70,19 +70,51 @@ def get_client(
 
 def scale_measurement_records(records: list[ScheduleMeasurementRecord], scale: float):
     for r in records:
-        r.active_energy_imported = r.active_energy_imported * scale if r.active_energy_imported is not None else None
-        r.active_energy_exported = r.active_energy_exported * scale if r.active_energy_exported is not None else None
-        r.reactive_energy_imported = r.reactive_energy_imported * scale if r.reactive_energy_imported is not None else None
-        r.reactive_energy_exported = r.reactive_energy_exported * scale if r.reactive_energy_exported is not None else None
+        r.active_energy_imported = (
+            r.active_energy_imported * scale
+            if r.active_energy_imported is not None
+            else None
+        )
+        r.active_energy_exported = (
+            r.active_energy_exported * scale
+            if r.active_energy_exported is not None
+            else None
+        )
+        r.reactive_energy_imported = (
+            r.reactive_energy_imported * scale
+            if r.reactive_energy_imported is not None
+            else None
+        )
+        r.reactive_energy_exported = (
+            r.reactive_energy_exported * scale
+            if r.reactive_energy_exported is not None
+            else None
+        )
     return records
 
 
 def scale_usage_records(records: list[ScheduleUsageRecord], scale: float):
     for r in records:
-        r.active_energy_imported = r.active_energy_imported * scale if r.active_energy_imported is not None else None
-        r.active_energy_exported = r.active_energy_exported * scale if r.active_energy_exported is not None else None
-        r.reactive_energy_imported = r.reactive_energy_imported * scale if r.reactive_energy_imported is not None else None
-        r.reactive_energy_exported = r.reactive_energy_exported * scale if r.reactive_energy_exported is not None else None
+        r.active_energy_imported = (
+            r.active_energy_imported * scale
+            if r.active_energy_imported is not None
+            else None
+        )
+        r.active_energy_exported = (
+            r.active_energy_exported * scale
+            if r.active_energy_exported is not None
+            else None
+        )
+        r.reactive_energy_imported = (
+            r.reactive_energy_imported * scale
+            if r.reactive_energy_imported is not None
+            else None
+        )
+        r.reactive_energy_exported = (
+            r.reactive_energy_exported * scale
+            if r.reactive_energy_exported is not None
+            else None
+        )
     return records
 
 
@@ -130,7 +162,6 @@ def get_schedule_measurement_records(
         logger.error(f"Failed to fetch measurement records: {e}")
         logger.error(f"Response: {response.text}")
         raise
-    response.raise_for_status()
     records = response.json()
     records = sorted(records, key=lambda r: r["time_local_utc"])
     measurement_records = [ScheduleMeasurementRecord.model_validate(r) for r in records]
@@ -141,9 +172,7 @@ def get_schedule_measurement_records(
 
 
 class DSOClient:
-    def __init__(
-        self, api_username: str, api_password: str, api_base_url: str
-    ) -> None:
+    def __init__(self, api_username: str, api_password: str, api_base_url: str) -> None:
         self.api_base_url = api_base_url
         self.api_username = api_username
         self.api_password = pydantic.SecretStr(api_password)
