@@ -86,7 +86,7 @@ def fetch(
         ebconnector = enerbit.DSOClient(
             api_base_url=api_base_url,
             api_username=api_username,
-            api_password=api_password,
+            api_password=api_password.get_secret_value(),
         )
     except Exception:
         err_console.print(
