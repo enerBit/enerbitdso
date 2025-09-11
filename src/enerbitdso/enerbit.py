@@ -4,6 +4,8 @@ import math
 import ssl
 import urllib
 import urllib.parse
+import base64
+import json
 from typing import Optional
 
 import httpx
@@ -18,6 +20,60 @@ TIMEOUT = httpx.Timeout(5, read=60)
 
 WATT_HOUR_TO_KILOWATT_HOUR = 0.001
 MAX_REQUEST_RANGE = dt.timedelta(days=7)
+
+
+class InvalidParameterError(ValueError):
+    """Error cuando los parámetros de consulta son inválidos"""
+    pass
+
+
+def _validate_query_parameters(frt_code: Optional[str], meter_serial: Optional[str]) -> None:
+    """Valida que exactamente uno de frt_code o meter_serial esté presente.
+    
+    Args:
+        frt_code: Código de frontera (opcional)
+        meter_serial: Número de serie del medidor (opcional)
+        
+    Raises:
+        InvalidParameterError: Si ambos parámetros están presentes o si ambos están ausentes
+    """
+    has_frt = frt_code is not None and frt_code.strip() != ""
+    has_meter = meter_serial is not None and meter_serial.strip() != ""
+    
+    if has_frt and has_meter:
+        raise InvalidParameterError(
+            "No se pueden especificar tanto 'frt_code' como 'meter_serial' al mismo tiempo. "
+            "Debe proporcionar exactamente uno de los dos parámetros."
+        )
+    
+    if not has_frt and not has_meter:
+        raise InvalidParameterError(
+            "Debe especificar al menos uno de 'frt_code' o 'meter_serial'. "
+            "No se pueden omitir ambos parámetros."
+        )
+
+
+def _decode_jwt_payload(token: str) -> dict:
+    """Decodifica el payload de un JWT sin verificar la firma"""
+    try:
+        parts = token.split('.')
+        if len(parts) != 3:
+            return {}
+        
+        payload = parts[1]
+        payload += '=' * (4 - len(payload) % 4)
+        decoded_bytes = base64.urlsafe_b64decode(payload)
+        return json.loads(decoded_bytes.decode('utf-8'))
+    except Exception:
+        return {}
+
+
+def _get_token_expiration(token: str) -> Optional[dt.datetime]:
+    """Extrae la fecha de expiración de un JWT"""
+    payload = _decode_jwt_payload(token)
+    if 'exp' in payload:
+        return dt.datetime.fromtimestamp(payload['exp'])
+    return None
 
 
 class ScheduleUsageRecord(pydantic.BaseModel):
@@ -43,7 +99,8 @@ class ScheduleMeasurementRecord(pydantic.BaseModel):
     reactive_energy_exported: Optional[float] = None
 
 
-def get_auth_token(base_url: str, username: str, password: pydantic.SecretStr) -> str:
+def get_auth_token(base_url: str, username: str, password: pydantic.SecretStr) -> dict:
+    """Obtiene tokens de autenticación (access y refresh)"""
     path = "/auth/token/"
     data = {"username": username, "password": password.get_secret_value()}
     with httpx.Client(base_url=base_url, timeout=TIMEOUT, verify=SSL_CONTEXT) as client:
@@ -54,8 +111,13 @@ def get_auth_token(base_url: str, username: str, password: pydantic.SecretStr) -
             logger.error(f"Failed to authenticate: {e}")
             logger.error(f"Response: {response.text}")
             raise
-    token = response.json()["access_token"]
-    return token
+    
+    token_data = response.json()
+    return {
+        "access_token": token_data["access_token"],
+        "refresh_token": token_data.get("refresh_token"),
+        "token_type": token_data.get("token_type", "bearer")
+    }
 
 
 def get_client(
@@ -63,8 +125,8 @@ def get_client(
 ) -> httpx.Client:
     url_parse: urllib.parse.ParseResult = urllib.parse.urlparse(base_url)
     url = url_parse.geturl()
-    token = get_auth_token(url, username, password)
-    auth = {"Authorization": f"Bearer {token}"}
+    token_data = get_auth_token(url, username, password)
+    auth = {"Authorization": f"Bearer {token_data['access_token']}"}
     return httpx.Client(base_url=url, headers=auth, timeout=TIMEOUT, verify=SSL_CONTEXT)
 
 
@@ -119,16 +181,23 @@ def scale_usage_records(records: list[ScheduleUsageRecord], scale: float):
 
 
 def get_schedule_usage_records(
-    client: httpx.Client, frt_code: str, since: dt.datetime, until: dt.datetime
+    client: httpx.Client, frt_code: Optional[str] = None, since: dt.datetime = None, until: dt.datetime = None, meter_serial: Optional[str] = None
 ) -> list[ScheduleUsageRecord]:
+    _validate_query_parameters(frt_code, meter_serial)
+    
     path = "/measurements/schedules/usages"
     params = {
         "since": since.isoformat(),
         "until": until.isoformat(),
-        "frt-code": frt_code,
         "period-string": "hour",
         "period-number": "1",
     }
+    
+    if frt_code and frt_code.strip():
+        params["frt-code"] = frt_code
+    if meter_serial and meter_serial.strip():
+        params["meter-serial"] = meter_serial
+    
     response = client.get(
         path,
         params=params,
@@ -147,14 +216,21 @@ def get_schedule_usage_records(
 
 
 def get_schedule_measurement_records(
-    client: httpx.Client, frt_code: str, since: dt.datetime, until: dt.datetime
+    client: httpx.Client, frt_code: Optional[str] = None, since: dt.datetime = None, until: dt.datetime = None, meter_serial: Optional[str] = None
 ) -> list[ScheduleMeasurementRecord]:
+    _validate_query_parameters(frt_code, meter_serial)
+    
     path = "/measurements/schedules/"
     params = {
         "since": since.isoformat(),
         "until": until.isoformat(),
-        "frt-code": frt_code,
     }
+    
+    if frt_code and frt_code.strip():
+        params["frt-code"] = frt_code
+    if meter_serial and meter_serial.strip():
+        params["meter-serial"] = meter_serial
+    
     response = client.get(path, params=params)
     try:
         response.raise_for_status()
@@ -176,35 +252,186 @@ class DSOClient:
         self.api_base_url = api_base_url
         self.api_username = api_username
         self.api_password = pydantic.SecretStr(api_password)
+        self._client: Optional[httpx.Client] = None
+        self._access_token: Optional[str] = None
+        self._refresh_token: Optional[str] = None
+        self._token_expires_at: Optional[dt.datetime] = None
+
+    def _is_token_valid(self) -> bool:
+        """Verifica si el token actual es válido y no ha expirado"""
+        if self._access_token is None:
+            return False
+        if self._token_expires_at is None:
+            return True
+        buffer = dt.timedelta(seconds=30)
+        return dt.datetime.now() < (self._token_expires_at - buffer)
+
+    def _refresh_access_token(self) -> bool:
+        """Intenta refrescar el access token usando el refresh token"""
+        if not self._refresh_token:
+            return False
+            
+        path = "/auth/refresh/"
+        data = {"refresh_token": self._refresh_token}
+        
+        try:
+            with httpx.Client(base_url=self.api_base_url, timeout=TIMEOUT, verify=SSL_CONTEXT) as client:
+                response = client.post(path, data=data)
+                response.raise_for_status()
+                
+                token_data = response.json()
+                self._access_token = token_data["access_token"]
+                
+                if "refresh_token" in token_data:
+                    self._refresh_token = token_data["refresh_token"]
+                
+                self._token_expires_at = _get_token_expiration(self._access_token)
+                
+                logger.debug("Access token refreshed successfully")
+                return True
+                
+        except Exception as e:
+            logger.warning(f"Failed to refresh token: {e}")
+            return False
+
+    def _authenticate(self) -> None:
+        """Obtiene un nuevo token de autenticación"""
+        logger.debug("Authenticating with API")
+        try:
+            token_data = get_auth_token(self.api_base_url, self.api_username, self.api_password)
+            
+            self._access_token = token_data["access_token"]
+            self._refresh_token = token_data.get("refresh_token")
+            
+            self._token_expires_at = _get_token_expiration(self._access_token)
+            
+            if self._token_expires_at:
+                time_to_expire = self._token_expires_at - dt.datetime.now()
+                logger.debug(f"Token expires at {self._token_expires_at} (in {time_to_expire})")
+            else:
+                logger.debug("Token expiration not found in JWT, using 1 hour default")
+                self._token_expires_at = dt.datetime.now() + dt.timedelta(hours=1)
+                
+            logger.debug("Authentication successful")
+        except Exception as e:
+            logger.error(f"Authentication failed: {e}")
+            self._access_token = None
+            self._refresh_token = None
+            self._token_expires_at = None
+            raise
+
+    def _get_client(self) -> httpx.Client:
+        """Obtiene un cliente HTTP autenticado, reutilizando la conexión si es posible"""
+        if not self._is_token_valid():
+            if self._refresh_token and not self._refresh_access_token():
+                self._authenticate()
+            elif not self._refresh_token:
+                self._authenticate()
+            
+            if self._client:
+                self._client.close()
+                self._client = None
+
+        if self._client is None:
+            url_parse = urllib.parse.urlparse(self.api_base_url)
+            url = url_parse.geturl()
+            auth = {"Authorization": f"Bearer {self._access_token}"}
+            self._client = httpx.Client(
+                base_url=url, 
+                headers=auth, 
+                timeout=TIMEOUT, 
+                verify=SSL_CONTEXT
+            )
+            logger.debug("Created new HTTP client")
+        
+        return self._client
+
+    def _handle_auth_error(self, error: httpx.HTTPStatusError) -> None:
+        """Maneja errores de autenticación forzando una nueva autenticación"""
+        if error.response.status_code == 401:
+            logger.warning("Received 401, forcing re-authentication")
+            self._access_token = None
+            self._refresh_token = None
+            self._token_expires_at = None
+            if self._client:
+                self._client.close()
+                self._client = None
 
     def fetch_schedule_usage_records_large_interval(
-        self, frt_code: str, since: dt.datetime, until: dt.datetime
+        self, frt_code: Optional[str] = None, since: dt.datetime = None, until: dt.datetime = None, meter_serial: Optional[str] = None
     ) -> list[ScheduleUsageRecord]:
-        ebclient = get_client(self.api_base_url, self.api_username, self.api_password)
+        _validate_query_parameters(frt_code, meter_serial)
+        
         number_of_requests = math.ceil((until - since) / MAX_REQUEST_RANGE)
         logger.debug(f"Fetching usages in {number_of_requests} requests")
         usage_records = []
+        
         for i in range(0, number_of_requests):
             fi = since + i * MAX_REQUEST_RANGE
             ff = min(fi + MAX_REQUEST_RANGE, until)
-            this_usage_records = get_schedule_usage_records(
-                ebclient, frt_code, since=fi, until=ff
-            )
-            usage_records.extend(this_usage_records)
+            
+            max_retries = 2
+            for attempt in range(max_retries):
+                try:
+                    client = self._get_client()
+                    this_usage_records = get_schedule_usage_records(
+                        client, frt_code=frt_code, since=fi, until=ff, meter_serial=meter_serial
+                    )
+                    usage_records.extend(this_usage_records)
+                    break
+                except httpx.HTTPStatusError as e:
+                    if e.response.status_code == 401 and attempt < max_retries - 1:
+                        logger.warning(f"Authentication error on attempt {attempt + 1}, retrying...")
+                        self._handle_auth_error(e)
+                        continue
+                    else:
+                        raise
+                        
         return usage_records
 
     def fetch_schedule_measurements_records_large_interval(
-        self, frt_code: str, since: dt.datetime, until: dt.datetime
+        self, frt_code: Optional[str] = None, since: dt.datetime = None, until: dt.datetime = None, meter_serial: Optional[str] = None
     ) -> list[ScheduleMeasurementRecord]:
-        ebclient = get_client(self.api_base_url, self.api_username, self.api_password)
+        _validate_query_parameters(frt_code, meter_serial)
+        
         number_of_requests = math.ceil((until - since) / MAX_REQUEST_RANGE)
         logger.debug(f"Fetching schedules in {number_of_requests} requests")
         schedule_records = []
+        
         for i in range(0, number_of_requests):
             fi = since + i * MAX_REQUEST_RANGE
             ff = min(fi + MAX_REQUEST_RANGE, until)
-            this_schedule_records = get_schedule_measurement_records(
-                ebclient, frt_code, since=fi, until=ff
-            )
-            schedule_records.extend(this_schedule_records)
+            
+            max_retries = 2
+            for attempt in range(max_retries):
+                try:
+                    client = self._get_client()
+                    this_schedule_records = get_schedule_measurement_records(
+                        client, frt_code=frt_code, since=fi, until=ff, meter_serial=meter_serial
+                    )
+                    schedule_records.extend(this_schedule_records)
+                    break
+                except httpx.HTTPStatusError as e:
+                    if e.response.status_code == 401 and attempt < max_retries - 1:
+                        logger.warning(f"Authentication error on attempt {attempt + 1}, retrying...")
+                        self._handle_auth_error(e)
+                        continue
+                    else:
+                        raise
+                        
         return schedule_records
+
+    def close(self) -> None:
+        """Cierra la conexión HTTP explícitamente"""
+        if self._client:
+            self._client.close()
+            self._client = None
+        logger.debug("HTTP client closed")
+
+    def __enter__(self):
+        """Context manager entry"""
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Context manager exit - cierra la conexión automáticamente"""
+        self.close()
