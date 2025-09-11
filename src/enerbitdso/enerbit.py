@@ -181,7 +181,7 @@ def scale_usage_records(records: list[ScheduleUsageRecord], scale: float):
 
 
 def get_schedule_usage_records(
-    client: httpx.Client, frt_code: Optional[str] = None, since: dt.datetime = None, until: dt.datetime = None, meter_serial: Optional[str] = None
+    client: httpx.Client, frt_code: Optional[str] = None, since: Optional[dt.datetime] = None, until: Optional[dt.datetime] = None, meter_serial: Optional[str] = None
 ) -> list[ScheduleUsageRecord]:
     _validate_query_parameters(frt_code, meter_serial)
     
@@ -216,7 +216,7 @@ def get_schedule_usage_records(
 
 
 def get_schedule_measurement_records(
-    client: httpx.Client, frt_code: Optional[str] = None, since: dt.datetime = None, until: dt.datetime = None, meter_serial: Optional[str] = None
+    client: httpx.Client, frt_code: Optional[str] = None, since: Optional[dt.datetime] = None, until: Optional[dt.datetime] = None, meter_serial: Optional[str] = None
 ) -> list[ScheduleMeasurementRecord]:
     _validate_query_parameters(frt_code, meter_serial)
     
@@ -358,7 +358,7 @@ class DSOClient:
                 self._client = None
 
     def fetch_schedule_usage_records_large_interval(
-        self, frt_code: Optional[str] = None, since: dt.datetime = None, until: dt.datetime = None, meter_serial: Optional[str] = None
+        self, frt_code: Optional[str] = None, since: Optional[dt.datetime] = None, until: Optional[dt.datetime] = None, meter_serial: Optional[str] = None
     ) -> list[ScheduleUsageRecord]:
         _validate_query_parameters(frt_code, meter_serial)
         
@@ -390,7 +390,7 @@ class DSOClient:
         return usage_records
 
     def fetch_schedule_measurements_records_large_interval(
-        self, frt_code: Optional[str] = None, since: dt.datetime = None, until: dt.datetime = None, meter_serial: Optional[str] = None
+        self, frt_code: Optional[str] = None, since: Optional[dt.datetime] = None, until: Optional[dt.datetime] = None, meter_serial: Optional[str] = None
     ) -> list[ScheduleMeasurementRecord]:
         _validate_query_parameters(frt_code, meter_serial)
         
