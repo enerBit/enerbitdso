@@ -23,12 +23,16 @@ WEEKS_TO_TEST = 5
 class TestMyLibrary(unittest.TestCase):
     @patch("enerbitdso.enerbit.get_auth_token")
     def test_get_all_usage_records(self, mock_get_auth_token):
-        today = dt.datetime.now()
+        today = dt.datetime.now().replace(minute=0, second=0, microsecond=0)
         since_month = today - dt.timedelta(weeks=WEEKS_TO_TEST)
         until_month = today
         frontier = "Frt" + "".join(random.choices("0123456789", k=5))
-        create_mocked_schedules(frt_code=frontier, since=since_month, until=until_month)
-        mock_get_auth_token.return_value = "my_token"
+        create_mocked_usages(frt_code=frontier, since=since_month, until=until_month)
+        mock_get_auth_token.return_value = {
+            "access_token": "fake_access_token",
+            "refresh_token": "fake_refresh_token",
+            "token_type": "bearer"
+        }
         ebconnector = DSOClient(
             api_base_url="https://dso.enerbit.me/",
             api_username="test",
@@ -41,6 +45,9 @@ class TestMyLibrary(unittest.TestCase):
             usages = ebconnector.fetch_schedule_usage_records_large_interval(
                 frt_code=frontier, since=since_month, until=until_month
             )
+        print(f"🔍 DEBUG: Created {len(mocked_usages)} mocked usages")
+        print(f"🔍 DEBUG: Created {mocked_usages[0]} mocked usages")
+        print(f"🔍 DEBUG: Created {len(usages)} usages")
         self.assertEqual(usages, mocked_usages)
 
     @patch("enerbitdso.enerbit.get_auth_token")
@@ -52,7 +59,11 @@ class TestMyLibrary(unittest.TestCase):
         until = until_month
         frontier = "Frt" + "".join(random.choices("0123456789", k=5))
         create_mocked_schedules(frt_code=frontier, since=since_month, until=until_month)
-        mock_get_auth_token.return_value = "my_token"
+        mock_get_auth_token.return_value = {
+        "access_token": "fake_access_token",
+        "refresh_token": "fake_refresh_token",
+        "token_type": "bearer"
+    }
         ebconnector = DSOClient(
             api_base_url="https://dso.enerbit.me/",
             api_username="test",
@@ -79,7 +90,11 @@ class TestMyLibrary(unittest.TestCase):
         until = since_month
         frontier = "Frt" + "".join(random.choices("0123456789", k=5))
         create_mocked_schedules(frt_code=frontier, since=since_month, until=until_month)
-        mock_get_auth_token.return_value = "my_token"
+        mock_get_auth_token.return_value = {
+        "access_token": "fake_access_token",
+        "refresh_token": "fake_refresh_token",
+        "token_type": "bearer"
+    }
         ebconnector = DSOClient(
             api_base_url="https://dso.enerbit.me/",
             api_username="test",
@@ -101,7 +116,11 @@ class TestMyLibrary(unittest.TestCase):
         until_month = today
         frontier = "Frt" + "".join(random.choices("0123456789", k=5))
         create_mocked_usages(frt_code=frontier, since=since_month, until=until_month)
-        mock_get_auth_token.return_value = "my_token"
+        mock_get_auth_token.return_value = {
+        "access_token": "fake_access_token",
+        "refresh_token": "fake_refresh_token",
+        "token_type": "bearer"
+    }
         ebconnector = DSOClient(
             api_base_url="https://dso.enerbit.me/",
             api_username="test",
@@ -125,7 +144,11 @@ class TestMyLibrary(unittest.TestCase):
         until = until_month
         frontier = "Frt" + "".join(random.choices("0123456789", k=5))
         create_mocked_usages(frt_code=frontier, since=since_month, until=until_month)
-        mock_get_auth_token.return_value = "my_token"
+        mock_get_auth_token.return_value = {
+        "access_token": "fake_access_token",
+        "refresh_token": "fake_refresh_token",
+        "token_type": "bearer"
+    }
         ebconnector = DSOClient(
             api_base_url="https://dso.enerbit.me/",
             api_username="test",
@@ -152,7 +175,11 @@ class TestMyLibrary(unittest.TestCase):
         until = since_month
         frontier = "Frt" + "".join(random.choices("0123456789", k=5))
         create_mocked_usages(frt_code=frontier, since=since_month, until=until_month)
-        mock_get_auth_token.return_value = "my_token"
+        mock_get_auth_token.return_value = {
+        "access_token": "fake_access_token",
+        "refresh_token": "fake_refresh_token",
+        "token_type": "bearer"
+    }
         ebconnector = DSOClient(
             api_base_url="https://dso.enerbit.me/",
             api_username="test",
@@ -175,7 +202,11 @@ class TestMyLibrary(unittest.TestCase):
         frontier = "Frt" + "".join(random.choices("0123456789", k=5))
         meter = "".join(random.choices("0123456789", k=5))
         
-        mock_get_auth_token.return_value = "my_token"
+        mock_get_auth_token.return_value = {
+        "access_token": "fake_access_token",
+        "refresh_token": "fake_refresh_token",
+        "token_type": "bearer"
+    }
         ebconnector = DSOClient(
             api_base_url="https://dso.enerbit.me/",
             api_username="test",
@@ -195,7 +226,11 @@ class TestMyLibrary(unittest.TestCase):
         today = dt.datetime.now()
         yesterday = today - dt.timedelta(days=1)
         
-        mock_get_auth_token.return_value = "my_token"
+        mock_get_auth_token.return_value = {
+        "access_token": "fake_access_token",
+        "refresh_token": "fake_refresh_token",
+        "token_type": "bearer"
+    }
         ebconnector = DSOClient(
             api_base_url="https://dso.enerbit.me/",
             api_username="test",
@@ -215,7 +250,11 @@ class TestMyLibrary(unittest.TestCase):
         today = dt.datetime.now()
         yesterday = today - dt.timedelta(days=1)
         
-        mock_get_auth_token.return_value = "my_token"
+        mock_get_auth_token.return_value = {
+        "access_token": "fake_access_token",
+        "refresh_token": "fake_refresh_token",
+        "token_type": "bearer"
+    }
         ebconnector = DSOClient(
             api_base_url="https://dso.enerbit.me/",
             api_username="test",
@@ -244,7 +283,11 @@ class TestMyLibrary(unittest.TestCase):
         for i in range(min(3, len(mocked_usages))):
             mocked_usages[i].meter_serial = test_meter
         
-        mock_get_auth_token.return_value = "my_token"
+        mock_get_auth_token.return_value = {
+        "access_token": "fake_access_token",
+        "refresh_token": "fake_refresh_token",
+        "token_type": "bearer"
+    }
         ebconnector = DSOClient(
             api_base_url="https://dso.enerbit.me/",
             api_username="test",
