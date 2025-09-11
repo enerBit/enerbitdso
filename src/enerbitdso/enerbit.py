@@ -285,10 +285,7 @@ class DSOClient:
                 if "refresh_token" in token_data:
                     self._refresh_token = token_data["refresh_token"]
                 
-                if not self._access_token:
-                    return False
-                
-                self._token_expires_at = _get_token_expiration(self._access_token)
+                self._token_expires_at = _get_token_expiration(self._access_token) if self._access_token is not None else None
                 
                 logger.debug("Access token refreshed successfully")
                 return True
@@ -303,12 +300,10 @@ class DSOClient:
         try:
             token_data = get_auth_token(self.api_base_url, self.api_username, self.api_password)
             
-            if not self._access_token:
-                raise
             self._access_token = token_data["access_token"]
             self._refresh_token = token_data.get("refresh_token")
             
-            self._token_expires_at = _get_token_expiration(self._access_token)
+            self._token_expires_at = _get_token_expiration(self._access_token) if self._access_token is not None else None
             
             if self._token_expires_at:
                 time_to_expire = self._token_expires_at - dt.datetime.now()
