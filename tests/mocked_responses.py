@@ -27,6 +27,8 @@ def create_mocked_schedules(
     list_interval = intervals.to_dict(orient="records")
     letters = string.ascii_lowercase
     meter_serial = "".join(random.choice(letters) for i in range(10))
+    voltage_multiplier = 1
+    current_multiplier = 1
     active_energy_imported = 0
     active_energy_exported = 0
     reactive_energy_imported = 0
@@ -36,14 +38,14 @@ def create_mocked_schedules(
         active_energy_exported += round(random.randint(0, 100))
         reactive_energy_imported += round(random.randint(0, 100))
         reactive_energy_exported += round(random.randint(0, 100))
-        mocked_usages.append(
-            ScheduleUsageRecord.model_validate(
+        mocked_schedules.append(
+            ScheduleMeasurementRecord.model_validate(
                 {
                     "frt_code": str(frt_code),
                     "meter_serial": str(meter_serial),
                     "time_local_utc": item["start"],
-                    "voltage_multiplier": 1,
-                    "current_multiplier": 1,
+                    "voltage_multiplier": voltage_multiplier,
+                    "current_multiplier": current_multiplier,
                     "active_energy_imported": active_energy_imported,
                     "active_energy_exported": active_energy_exported,
                     "reactive_energy_imported": reactive_energy_imported,
@@ -54,16 +56,27 @@ def create_mocked_schedules(
 
 
 def get_mocked_schedules(
-    ebclient, frt_code, since, until
+    ebclient, frt_code=None, since=None, until=None, meter_serial=None
 ) -> list[ScheduleMeasurementRecord]:
-    filtered_mocked_usages = [
-        schedules
-        for schedules in mocked_schedules
-        if schedules.time_local_utc >= since
-        and schedules.time_local_utc <= until
-        and schedules.frt_code == frt_code
-    ]
-    return filtered_mocked_usages
+    """Mock function that handles both frt_code and meter_serial parameters"""
+    filtered_mocked_schedules = []
+    
+    for schedule in mocked_schedules:
+        # Filter by time range
+        if since and schedule.time_local_utc < since:
+            continue
+        if until and schedule.time_local_utc > until:
+            continue
+            
+        # Filter by frt_code or meter_serial
+        if frt_code and schedule.frt_code != frt_code:
+            continue
+        if meter_serial and schedule.meter_serial != meter_serial:
+            continue
+            
+        filtered_mocked_schedules.append(schedule)
+    
+    return filtered_mocked_schedules
 
 
 def create_mocked_usages(frt_code: str, since: dt.datetime, until: dt.datetime) -> None:
@@ -97,12 +110,25 @@ def create_mocked_usages(frt_code: str, since: dt.datetime, until: dt.datetime) 
         )
 
 
-def get_mocked_usages(ebclient, frt_code, since, until) -> list[ScheduleUsageRecord]:
-    filtered_mocked_usages = [
-        usages
-        for usages in mocked_usages
-        if usages.time_start >= since
-        and usages.time_end <= until
-        and usages.frt_code == frt_code
-    ]
+def get_mocked_usages(
+    ebclient, frt_code=None, since=None, until=None, meter_serial=None
+) -> list[ScheduleUsageRecord]:
+    """Mock function that handles both frt_code and meter_serial parameters"""
+    filtered_mocked_usages = []
+    
+    for usage in mocked_usages:
+        # Filter by time range
+        if since and usage.time_start < since:
+            continue
+        if until and usage.time_end > until:
+            continue
+            
+        # Filter by frt_code or meter_serial
+        if frt_code and usage.frt_code != frt_code:
+            continue
+        if meter_serial and usage.meter_serial != meter_serial:
+            continue
+            
+        filtered_mocked_usages.append(usage)
+    
     return filtered_mocked_usages
