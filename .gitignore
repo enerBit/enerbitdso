@@ -1,6 +1,8 @@
 # Local config files
 *.env
 .vscode
+main.py
+frt_prueba.txt
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

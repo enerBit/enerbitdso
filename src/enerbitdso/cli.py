@@ -80,6 +80,18 @@ def fetch(
     frt_file: pathlib.Path = typer.Option(
         None, help="Path file with one frt code per line"
     ),
+    connection_timeout: int = typer.Option(
+        10,
+        min=0,
+        max=20,
+        help="Config the timeout for HTTP connection (in seconds)",
+    ),
+    read_timeout: int = typer.Option(
+        10,
+        min=0,
+        max=20,
+        help="Config the timeout for HTTP requests (in seconds)",
+    ),
     meter_serial: str = typer.Option(
         None, help="Filter by specific meter serial number"
     ),
@@ -89,6 +101,8 @@ def fetch(
         api_base_url=api_base_url,
         api_username=api_username,
         api_password=api_password.get_secret_value(),
+        connection_timeout=connection_timeout,
+        read_timeout=read_timeout,
     )
 
     today = dt.datetime.now(TZ_INFO).replace(**DATE_PARTS_TO_START_DAY)
