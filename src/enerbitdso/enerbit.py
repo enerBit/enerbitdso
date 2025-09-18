@@ -76,11 +76,16 @@ def _get_token_expiration(token: str) -> Optional[dt.datetime]:
     return None
 
 
+def set_http_timeout(timeout):
+    global TIMEOUT
+    TIMEOUT = httpx.Timeout(timeout, read=60)
+
+
 class ScheduleUsageRecord(pydantic.BaseModel):
-    frt_code: str
     meter_serial: str
     time_start: dt.datetime
     time_end: dt.datetime
+    frt_code: Optional[str] = None
     active_energy_imported: Optional[float] = None
     active_energy_exported: Optional[float] = None
     reactive_energy_imported: Optional[float] = None
@@ -88,9 +93,9 @@ class ScheduleUsageRecord(pydantic.BaseModel):
 
 
 class ScheduleMeasurementRecord(pydantic.BaseModel):
-    frt_code: str
     meter_serial: str
     time_local_utc: dt.datetime
+    frt_code: Optional[str] = None
     voltage_multiplier: Optional[float] = None
     current_multiplier: Optional[float] = None
     active_energy_imported: Optional[float] = None

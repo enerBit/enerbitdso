@@ -138,6 +138,7 @@ También tiene opción `--help` que muestra la ayuda particular de este sub-coma
 │    --timezone            TEXT               [default: America/Bogota]                                          │
 │    --out-format          [csv|jsonl]        Output file format [default: jsonl]                                │
 │    --frt-file            PATH               Path file with one frt code per line [default: None]               │
+│    --timeout             INTEGER RANGE      [0<=x<=20]  [default: 5]                                           │
 │    --help                                   Show this message and exit.                                        │
 ╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 ```
