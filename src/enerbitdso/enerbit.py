@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 SSL_CONTEXT = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
 
-TIMEOUT = httpx.Timeout(5, read=60)
+TIMEOUT = httpx.Timeout(10, read=60)
 
 WATT_HOUR_TO_KILOWATT_HOUR = 0.001
 MAX_REQUEST_RANGE = dt.timedelta(days=7)
@@ -76,9 +76,9 @@ def _get_token_expiration(token: str) -> Optional[dt.datetime]:
     return None
 
 
-def set_http_timeout(timeout):
+def set_http_timeout(connection_timeout, read_timeout):
     global TIMEOUT
-    TIMEOUT = httpx.Timeout(timeout, read=60)
+    TIMEOUT = httpx.Timeout(connection_timeout, read=read_timeout)
 
 
 class ScheduleUsageRecord(pydantic.BaseModel):
@@ -253,7 +253,7 @@ def get_schedule_measurement_records(
 
 
 class DSOClient:
-    def __init__(self, api_username: str, api_password: str, api_base_url: str) -> None:
+    def __init__(self, api_username: str, api_password: str, api_base_url: str, connection_timeout: Optional[int] = None, read_timeout: Optional[int] = None) -> None:
         self.api_base_url = api_base_url
         self.api_username = api_username
         self.api_password = pydantic.SecretStr(api_password)
@@ -261,6 +261,15 @@ class DSOClient:
         self._access_token: Optional[str] = None
         self._refresh_token: Optional[str] = None
         self._token_expires_at: Optional[dt.datetime] = None
+        if connection_timeout is not None and (connection_timeout >= 0 and connection_timeout <= 20):
+            connection_timeout = connection_timeout
+        else:
+            connection_timeout = 10
+        if read_timeout is not None and (read_timeout >= 60 and read_timeout <= 120):
+            read_timeout = read_timeout
+        else:
+            read_timeout = 60
+        set_http_timeout(connection_timeout, read_timeout)
 
     def _is_token_valid(self) -> bool:
         """Verifica si el token actual es válido y no ha expirado"""
