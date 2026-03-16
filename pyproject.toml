@@ -65,12 +65,9 @@ addopts = ["--import-mode=importlib"]
 
 [tool.ruff]
 line-length = 119
-max-complexity = 15
-indent-width = 4
 
 [tool.ruff.lint]
 select = ["B", "C", "E", "F", "W", "B9", "I"]
-ignore = ["E203", "E501", "W503"]
 
 [tool.ruff.lint.flake8-bugbear]
 extend-immutable-calls = [

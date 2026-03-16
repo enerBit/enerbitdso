@@ -89,6 +89,14 @@ Frt00000
 Frt00001
 ```
 
+También se puede consultar por serial de medidor usando la opción `--meter-serial`:
+
+```powershell
+> enerbitdso usages fetch --meter-serial "S4AM22060202018" --since 20230401 --until 20230405
+```
+
+> **Nota:** `--meter-serial` es mutuamente excluyente con los códigos de frontera (`--frt-file` o argumentos FRTS).
+
 #### Especificación de intervalo de tiempo para la consulta
 
 El intervalo de tiempo se define a través de los parámetros de tipo fecha `--since` y `--until` (desde y hasta, respectivamente).
@@ -140,150 +148,168 @@ También tiene opción `--help` que muestra la ayuda particular de este sub-coma
 │    --frt-file            PATH               Path file with one frt code per line [default: None]                  │
 │    --connection_timeout  INTEGER RANGE      The timeout used for HTTP connection in seconds[0<=x<=20][default: 10]│
 │    --read_timeout        INTEGER RANGE      The timeout used for HTTP requests in seconds[60<=x<=120][default: 60]│
+│    --meter-serial        TEXT               Serial del medidor a consultar [default: None]                        │
 │    --help                                   Show this message and exit.                                           │
 ╰───────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 ```
 
 # Librería DSO
 
-Para poder hacer uso de la librería DSO se debe hacer lo siguiente
+Para uso programático, `DSOClient` es un cliente asíncrono que debe usarse con `async with` y `await`.
 
-## Inicializar el constructor
-
-Para ello se debe importar el constructor de la siguiente forma:
+## Uso básico
 
 ```python
+import asyncio
+import datetime as dt
 from enerbitdso.enerbit import DSOClient
+
+since = dt.datetime(2023, 4, 1, tzinfo=dt.timezone.utc)
+until = dt.datetime(2023, 4, 5, tzinfo=dt.timezone.utc)
+
+async def main():
+    async with DSOClient(
+        api_base_url="https://dso.enerbit.me",
+        api_username="usuario@empresa.com",
+        api_password="contraseña",
+    ) as client:
+        records = await client.fetch_schedule_usage_records_large_interval(
+            frt_code="Frt00000", since=since, until=until
+        )
+
+asyncio.run(main())
 ```
 
-La inicialización se debe hacer asi:
+También se puede consultar por serial de medidor:
 
 ```python
-ebconnector = DSOClient(
-    api_base_url="https://dso.enerbit.me/",
-    api_username="usuario_del_DSO",
-    api_password="contraseña_del_DSO",
-)
+async def main():
+    async with DSOClient(
+        api_base_url="https://dso.enerbit.me",
+        api_username="usuario@empresa.com",
+        api_password="contraseña",
+    ) as client:
+        records = await client.fetch_schedule_usage_records_large_interval(
+            meter_serial="S4AM22060202018", since=since, until=until
+        )
 ```
 
-Al tener el objeto ya se pueden realizar consultas de la siguiente forma:
+Y para consultar perfiles de medición:
 
 ```python
-usage_records = ebconnector.fetch_schedule_usage_records_large_interval(
-    frt_code=frt_code, since=since, until=until
-)
+async def main():
+    async with DSOClient(
+        api_base_url="https://dso.enerbit.me",
+        api_username="usuario@empresa.com",
+        api_password="contraseña",
+    ) as client:
+        schedule_records = await client.fetch_schedule_measurements_records_large_interval(
+            frt_code="Frt00000", since=since, until=until
+        )
 ```
 
-Tambien se puede hacer una consulta de perfiles de la siguiente forma:
+## Parámetros de timeout
+
+Para mejorar la estabilidad en consultas masivas se pueden configurar timeouts personalizados:
 
 ```python
-schedule_records = ebconnector.fetch_schedule_measurements_records_large_interval(
-    frt_code=frt_code, since=since, until=until
-)
-```
-
-## Configuración del Cliente DSO
-
-### Parámetros Básicos
-
-```python
-ebconnector = DSOClient(
-    api_base_url="https://dso.enerbit.me/",
-    api_username="tu_usuario@empresa.com",
-    api_password="tu_contraseña"
-)
-```
-
-### Configuración Avanzada con Timeouts
-
-Para mejorar la estabilidad en consultas masivas, especialmente cuando se procesan muchas fronteras, se recomienda configurar timeouts personalizados:
-
-```python
-ebconnector = DSOClient(
-    api_base_url="https://dso.enerbit.me/",
+async with DSOClient(
+    api_base_url="https://dso.enerbit.me",
     api_username="tu_usuario@empresa.com",
     api_password="tu_contraseña",
-    connection_timeout=20,  # Timeout de conexión en segundos (1-60)
-    read_timeout=120        # Timeout de lectura en segundos (60-300)
-)
+    connection_timeout=20,  # Timeout de conexión en segundos (0-20, default: 10)
+    read_timeout=120        # Timeout de lectura en segundos (60-120, default: 60)
+) as client:
+    ...
 ```
 
-### Parámetros de Timeout
-
-- **connection_timeout**: Tiempo máximo para establecer conexión con el servidor (recomendado: 10-30 segundos)
-- **read_timeout**: Tiempo máximo para recibir respuesta del servidor (recomendado: 60-180 segundos)
-
-### Configuración con Variables de Entorno
+## Variables de entorno para credenciales
 
 Una práctica recomendada es usar variables de entorno para las credenciales:
 
 ```python
+import asyncio
 import os
+from enerbitdso.enerbit import DSOClient
 
-ebconnector = DSOClient(
-    api_base_url=os.getenv("DSO_HOST", "https://dso.enerbit.me/"),
-    api_username=os.getenv("DSO_USERNAME"),
-    api_password=os.getenv("DSO_PASSWORD"),
-    connection_timeout=20,
-    read_timeout=120
-)
+async def main():
+    async with DSOClient(
+        api_base_url=os.getenv("DSO_HOST", "https://dso.enerbit.me"),
+        api_username=os.getenv("DSO_USERNAME"),
+        api_password=os.getenv("DSO_PASSWORD"),
+        connection_timeout=20,
+        read_timeout=120,
+    ) as client:
+        ...
+
+asyncio.run(main())
 ```
-
-Configurar las variables de entorno:
 
 **Linux/macOS:**
 ```bash
-export DSO_HOST="https://dso.enerbit.me/"
+export DSO_HOST="https://dso.enerbit.me"
 export DSO_USERNAME="tu_usuario@empresa.com"
 export DSO_PASSWORD="tu_contraseña"
 ```
 
 **Windows:**
 ```cmd
-set DSO_HOST=https://dso.enerbit.me/
+set DSO_HOST=https://dso.enerbit.me
 set DSO_USERNAME=tu_usuario@empresa.com
 set DSO_PASSWORD=tu_contraseña
 ```
 
-# Ejemplo de Uso Masivo
+# Ejemplos
 
-## Archivo `example.py`
+El repositorio incluye dos archivos de ejemplo para distintos casos de uso.
 
-El repositorio incluye un archivo `example.py` que demuestra cómo procesar múltiples fronteras de manera eficiente usando concurrencia. Este ejemplo es útil para:
+## `basic_example.py` — Procesamiento secuencial
 
-- **Procesamiento masivo de fronteras**: Consulta múltiples fronteras en paralelo
-- **Manejo de errores**: Implementa reintentos automáticos y reportes de fronteras fallidas
-- **Generación de reportes**: Crea archivos Excel con matrices horarias de consumo
-- **Monitoreo de progreso**: Muestra el avance del procesamiento cada 500 fronteras
+Para uso simple o pocas fronteras. Procesa cada frontera una por una, lo que lo hace fácil de entender y depurar.
 
-### Características del ejemplo:
+- Sin concurrencia
+- Sin reintentos automáticos
+- Muestra el progreso cada 500 fronteras
+- Genera un archivo Excel con matrices horarias de consumo
 
-- 🚀 **Concurrencia**: Usa ThreadPoolExecutor para procesar múltiples fronteras simultáneamente
-- 🔄 **Reintentos**: Implementa backoff exponencial para manejar errores de red
-- 📊 **Progreso visual**: Muestra estadísticas de avance durante la ejecución
-- 📈 **Salida estructurada**: Genera matrices Excel organizadas por hora, día, mes y año
-- ⚠️ **Manejo de errores**: Reporta fronteras fallidas para análisis posterior
+### Uso:
 
-### Uso del ejemplo:
-
-1. **Configurar variables de entorno** (como se describe arriba)
-2. **Crear archivo de fronteras**: `frt_prueba.txt` con una frontera por línea
-3. **Ejecutar el script**:
+1. Configurar variables de entorno (como se describe arriba) o editar las constantes `DSO_USER`, `DSO_PASSWORD` y `DSO_BASE_URL` en el script.
+2. Crear archivo de fronteras `frt_prueba.txt` con una frontera por línea.
+3. Ejecutar:
    ```bash
-   python example.py
+   python basic_example.py
    ```
 
-### Archivos generados:
+## `concurrent_example.py` — Procesamiento concurrente
 
-- `Matrices_YYYYMMDD_HHMM.xlsx` - Datos principales organizados por matrices horarias
-- `fronteras_fallidas_YYYYMMDD_HHMM.txt` - Lista de fronteras que no se pudieron procesar
+Para procesamiento masivo (cientos o miles de fronteras). Lanza todas las consultas en paralelo con un límite de concurrencia.
+
+- Usa `asyncio.Semaphore(5)` para limitar la concurrencia máxima a 5 solicitudes simultáneas
+- Reintentos con backoff exponencial (hasta 3 intentos por frontera)
+- Monitoreo de progreso cada 500 fronteras
+- Genera un archivo Excel con matrices horarias de consumo
+
+### Uso:
+
+1. Configurar variables de entorno o editar las constantes en el script.
+2. Crear archivo de fronteras `frt_prueba.txt` con una frontera por línea.
+3. Ejecutar:
+   ```bash
+   python concurrent_example.py
+   ```
+
+### Archivos generados por ambos ejemplos:
+
+- `Matrices_YYYYMMDD_HHMM.xlsx` — Datos principales organizados por matrices horarias
+- `fronteras_fallidas_YYYYMMDD_HHMM.txt` — Lista de fronteras que no se pudieron procesar
 
 ### Configuración recomendada para producción:
 
 Para ambientes de producción o consultas masivas, ajusta estos parámetros en el ejemplo:
 
-- **max_workers**: Reduce de 30 a 5-10 para evitar saturar el servidor
+- **semaphore**: Límite de conexiones concurrentes. Reduce de 30 a 5-10 para evitar saturar el servidor
 - **Timeouts**: Usa connection_timeout=20 y read_timeout=120 como mínimo
 - **Intervalos de tiempo**: Limita los rangos de fechas para consultas más eficientes
 
-El archivo `example.py` sirve como base para desarrollar tus propios scripts de procesamiento masivo de datos de enerBit DSO.
+Los archivos `*_example.py` sirve como base para desarrollar tus propios scripts de procesamiento masivo de datos de enerBit DSO.

@@ -15,6 +15,8 @@ def as_json(records: list[pydantic.BaseModel]) -> io.StringIO:
 
 def as_csv(records: typing.Sequence[pydantic.BaseModel], header: bool) -> io.StringIO:
     res = io.StringIO(newline="")
+    if not records:
+        return res
     fields = records[0].model_fields.keys()
     writer = csv.DictWriter(res, fields, lineterminator="\n")
     if header:
