@@ -78,8 +78,8 @@ async def main():
         timestamp_failed = dt.now().strftime("%Y%m%d_%H%M")
         failed_filename = f"fronteras_fallidas_{timestamp_failed}.txt"
 
-        # with open(failed_filename, "w") as out:
-        #     out.write("\n".join(fronteras_fallidas))
+        with open(failed_filename, "w") as out:
+            out.write("\n".join(fronteras_fallidas))
 
         print(f"\n❌ {len(fronteras_fallidas)} fronteras fallaron y se guardaron en: {failed_filename}")
         print(f"Fronteras exitosas: {total_frontiers - len(fronteras_fallidas)}/{total_frontiers}")
@@ -124,7 +124,7 @@ async def main():
 
     timestamp = dt.now().strftime("%Y%m%d_%H%M")
     filename = f"Matrices_{timestamp}.xlsx"
-    # resultado.to_excel(filename, index=False)
+    resultado.to_excel(filename, index=False)
 
     print(f"\n✅ Archivo generado correctamente: {filename}")
 
