@@ -1,14 +1,15 @@
+import asyncio
 import datetime as dt
 import enum
 import logging
 import operator
 import pathlib
 import sys
+import zoneinfo
 from typing import Annotated, TypedDict
 
 import pydantic
 import typer
-import zoneinfo
 from rich.console import Console
 
 from enerbitdso import enerbit, formats
@@ -57,7 +58,7 @@ def today():
 
 
 @usages.command()
-def fetch(
+def fetch(  # noqa: C901
     api_base_url: Annotated[str, typer.Option(..., envvar="ENERBIT_API_BASE_URL")],
     api_username: Annotated[str, typer.Option(..., envvar="ENERBIT_API_USERNAME")],
     api_password: Annotated[
@@ -74,12 +75,8 @@ def fetch(
         formats=DATE_FORMATS,
         show_default="today",
     ),
-    out_format: OutputFormat = typer.Option(
-        "jsonl", help="Output file format", case_sensitive=False
-    ),
-    frt_file: pathlib.Path = typer.Option(
-        None, help="Path file with one frt code per line"
-    ),
+    out_format: OutputFormat = typer.Option("jsonl", help="Output file format", case_sensitive=False),
+    frt_file: pathlib.Path = typer.Option(None, help="Path file with one frt code per line"),
     connection_timeout: int = typer.Option(
         10,
         min=0,
@@ -92,9 +89,7 @@ def fetch(
         max=20,
         help="Config the timeout for HTTP requests (in seconds)",
     ),
-    meter_serial: str = typer.Option(
-        None, help="Filter by specific meter serial number"
-    ),
+    meter_serial: str = typer.Option(None, help="Filter by specific meter serial number"),
     frts: list[str] = typer.Argument(None, help="List of frt codes separated by ' '"),
 ):
     ebconnector = enerbit.DSOClient(
@@ -121,7 +116,7 @@ def fetch(
     if not operator.xor(frt_file is not None, len(frts) != 0) and meter_serial is None:
         err_console.print("Debe proporcionar FRTs (--frt-file o argumentos FRTS) o --meter-serial, pero no ambos")
         raise typer.Exit(code=1)
-        
+
     if meter_serial and (frt_file is not None or len(frts) != 0):
         err_console.print("No se puede usar --meter-serial junto con FRTs. Use uno u otro.")
         raise typer.Exit(code=1)
@@ -131,48 +126,47 @@ def fetch(
             frts = frts_src.read().splitlines()
 
     if meter_serial:
-        err_console.print(
-            f"Fetching usages for meter {meter_serial} since={since} until={until}"
-        )
+        err_console.print(f"Fetching usages for meter {meter_serial} since={since} until={until}")
         query_type = "meter"
         items_to_process = [meter_serial]
     else:
-        err_console.print(
-            f"Fetching usages for {len(frts)} frts since={since} until={until}"
-        )
+        err_console.print(f"Fetching usages for {len(frts)} frts since={since} until={until}")
         query_type = "frt"
         items_to_process = frts
 
-    with ebconnector:
+    async def _run():
         header = True
-        for i, item in enumerate(items_to_process, 1):
-            try:
-                if query_type == "meter":
-                    usage_records = ebconnector.fetch_schedule_usage_records_large_interval(
-                        frt_code=None, since=since, until=until, meter_serial=item
-                    )
-                    item_description = f"meter {item}"
-                else:
-                    usage_records = ebconnector.fetch_schedule_usage_records_large_interval(
-                        frt_code=item, since=since, until=until, meter_serial=None
-                    )
-                    item_description = f"frt code {item}"
-                    
-            except Exception:
-                err_console.print(f"Failed to fetch usage records for {item_description}")
-                err_console.print_exception()
-                continue
+        async with ebconnector:
+            for _i, item in enumerate(items_to_process, 1):
+                try:
+                    if query_type == "meter":
+                        usage_records = await ebconnector.fetch_schedule_usage_records_large_interval(
+                            frt_code=None, since=since, until=until, meter_serial=item
+                        )
+                        item_description = f"meter {item}"
+                    else:
+                        usage_records = await ebconnector.fetch_schedule_usage_records_large_interval(
+                            frt_code=item, since=since, until=until, meter_serial=None
+                        )
+                        item_description = f"frt code {item}"
 
-            match out_format:
-                case OutputFormat.csv:
-                    content = formats.as_csv(usage_records, header=header)
-                    header = False
-                case OutputFormat.jsonl:
-                    content = formats.as_jsonl(usage_records)
+                except Exception:
+                    err_console.print(f"Failed to fetch usage records for {item_description}")
+                    err_console.print_exception()
+                    continue
 
-            content.seek(0)
-            for s in content:
-                sys.stdout.write(s)
+                match out_format:
+                    case OutputFormat.csv:
+                        content = formats.as_csv(usage_records, header=header)
+                        header = False
+                    case OutputFormat.jsonl:
+                        content = formats.as_jsonl(usage_records)
+
+                content.seek(0)
+                for s in content:
+                    sys.stdout.write(s)
+
+    asyncio.run(_run())
 
 
 if __name__ == "__main__":

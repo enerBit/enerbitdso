@@ -3,6 +3,7 @@
 .vscode
 main.py
 frt_prueba.txt
+.idea
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
